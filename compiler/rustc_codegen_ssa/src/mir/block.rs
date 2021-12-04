@@ -26,13 +26,13 @@ use rustc_target::spec::abi::Abi;
 
 /// Used by `FunctionCx::codegen_terminator` for emitting common patterns
 /// e.g., creating a basic block, calling a function, etc.
-struct TerminatorCodegenHelper<'tcx> {
+struct TerminatorCodegenHelper<'terminator, 'tcx> {
     bb: mir::BasicBlock,
-    terminator: &'tcx mir::Terminator<'tcx>,
+    terminator: &'terminator mir::Terminator<'tcx>,
     funclet_bb: Option<mir::BasicBlock>,
 }
 
-impl<'a, 'tcx> TerminatorCodegenHelper<'tcx> {
+impl<'a, 'tcx> TerminatorCodegenHelper<'_, 'tcx> {
     /// Returns the appropriate `Funclet` for the current funclet, if on MSVC,
     /// either already previously cached, or newly created, by `landing_pad_for`.
     fn funclet<'b, Bx: BuilderMethods<'a, 'tcx>>(
@@ -179,7 +179,7 @@ impl<'a, 'tcx> TerminatorCodegenHelper<'tcx> {
 /// Codegen implementations for some terminator variants.
 impl<'a, 'tcx, Bx: BuilderMethods<'a, 'tcx>> FunctionCx<'a, 'tcx, Bx> {
     /// Generates code for a `Resume` terminator.
-    fn codegen_resume_terminator(&mut self, helper: TerminatorCodegenHelper<'tcx>, mut bx: Bx) {
+    fn codegen_resume_terminator(&mut self, helper: TerminatorCodegenHelper<'_, 'tcx>, mut bx: Bx) {
         if let Some(funclet) = helper.funclet(self) {
             bx.cleanup_ret(funclet, None);
         } else {
@@ -199,7 +199,7 @@ impl<'a, 'tcx, Bx: BuilderMethods<'a, 'tcx>> FunctionCx<'a, 'tcx, Bx> {
 
     fn codegen_switchint_terminator(
         &mut self,
-        helper: TerminatorCodegenHelper<'tcx>,
+        helper: TerminatorCodegenHelper<'_, 'tcx>,
         mut bx: Bx,
         discr: &mir::Operand<'tcx>,
         switch_ty: Ty<'tcx>,
@@ -305,7 +305,7 @@ impl<'a, 'tcx, Bx: BuilderMethods<'a, 'tcx>> FunctionCx<'a, 'tcx, Bx> {
 
     fn codegen_drop_terminator(
         &mut self,
-        helper: TerminatorCodegenHelper<'tcx>,
+        helper: TerminatorCodegenHelper<'_, 'tcx>,
         mut bx: Bx,
         location: mir::Place<'tcx>,
         target: mir::BasicBlock,
@@ -362,7 +362,7 @@ impl<'a, 'tcx, Bx: BuilderMethods<'a, 'tcx>> FunctionCx<'a, 'tcx, Bx> {
 
     fn codegen_assert_terminator(
         &mut self,
-        helper: TerminatorCodegenHelper<'tcx>,
+        helper: TerminatorCodegenHelper<'_, 'tcx>,
         mut bx: Bx,
         terminator: &mir::Terminator<'tcx>,
         cond: &mir::Operand<'tcx>,
@@ -444,7 +444,7 @@ impl<'a, 'tcx, Bx: BuilderMethods<'a, 'tcx>> FunctionCx<'a, 'tcx, Bx> {
     /// Returns `true` if this is indeed a panic intrinsic and codegen is done.
     fn codegen_panic_intrinsic(
         &mut self,
-        helper: &TerminatorCodegenHelper<'tcx>,
+        helper: &TerminatorCodegenHelper<'_, 'tcx>,
         bx: &mut Bx,
         intrinsic: Option<Symbol>,
         instance: Option<Instance<'tcx>>,
@@ -526,7 +526,7 @@ impl<'a, 'tcx, Bx: BuilderMethods<'a, 'tcx>> FunctionCx<'a, 'tcx, Bx> {
 
     fn codegen_call_terminator(
         &mut self,
-        helper: TerminatorCodegenHelper<'tcx>,
+        helper: TerminatorCodegenHelper<'_, 'tcx>,
         mut bx: Bx,
         terminator: &mir::Terminator<'tcx>,
         func: &mir::Operand<'tcx>,
@@ -869,7 +869,7 @@ impl<'a, 'tcx, Bx: BuilderMethods<'a, 'tcx>> FunctionCx<'a, 'tcx, Bx> {
 
     fn codegen_asm_terminator(
         &mut self,
-        helper: TerminatorCodegenHelper<'tcx>,
+        helper: TerminatorCodegenHelper<'_, 'tcx>,
         mut bx: Bx,
         terminator: &mir::Terminator<'tcx>,
         template: &[ast::InlineAsmTemplatePiece],
@@ -960,7 +960,7 @@ impl<'a, 'tcx, Bx: BuilderMethods<'a, 'tcx>> FunctionCx<'a, 'tcx, Bx> {
         &mut self,
         mut bx: Bx,
         bb: mir::BasicBlock,
-        terminator: &'tcx mir::Terminator<'tcx>,
+        terminator: &'_ mir::Terminator<'tcx>,
     ) {
         debug!("codegen_terminator: {:?}", terminator);
 
